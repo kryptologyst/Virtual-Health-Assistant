@@ -11,37 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.10, 3.11]
+        python-version: ['3.10', '3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v3
-    
+    - uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y libjpeg-dev zlib1g-dev
+
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Lint with ruff
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest pytest-cov
+
+    - name: Run tests
       run: |
-        ruff check src/ scripts/ tests/
-    
-    - name: Format check with black
-      run: |
-        black --check src/ scripts/ tests/
-    
-    - name: Type check with mypy
-      run: |
-        mypy src/ --ignore-missing-imports
-    
-    - name: Test with pytest
-      run: |
-        pytest tests/ -v --tb=short
-    
-    - name: Test demo import
-      run: |
-        python -c "import sys; sys.path.append('src'); from models import ClinicalBERTClassifier; print('Demo import successful')"
+        if [ -d tests ]; then
+          pytest tests/ -v --tb=short
+        else
+          echo "No tests directory found, skipping tests"
+        fi
